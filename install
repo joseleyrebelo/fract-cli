@@ -1,0 +1,9 @@
+#!/bin/zsh
+# ⚠️ This is a gist - not cross-tested. Read through; use it diligently.
+
+source lib/util
+
+ensure_dependency grep
+ensure_dependency wc
+
+install_bin_on_cli
