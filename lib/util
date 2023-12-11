@@ -7,6 +7,13 @@ ensure_dependency() {
   }
 }
 
+ensure_min_args() {
+  type $1 >/dev/null 2>&1 || {
+    echo >&2 "I require '$1' but it's not installed.  Aborting."
+    exit 1
+  }
+}
+
 install_bin_on_cli() {
   local DIR="${0:A:h}"
   local LINE="export PATH=\"$DIR/bin:\$PATH\""

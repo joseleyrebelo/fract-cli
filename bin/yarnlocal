@@ -1,0 +1,77 @@
+#!/bin/zsh
+
+get_relative_path() {
+  echo $(node -e "console.log(require('path').relative('$(pwd)', '$1'))")
+}
+
+local RELAY_DIR_NAME=__relay
+local NPM_PACKAGES_DIR=~/Code/__npm-packages
+local RELAY_PACKAGES_DIR=$NPM_PACKAGES_DIR/$RELAY_DIR_NAME
+local CURRENT_DIR=$(pwd)
+
+ensure_dir() {
+  if [ ! -d $1 ]; then
+    mkdir $1
+  fi
+}
+
+initiate_relay() {
+  ensure_dir $RELAY_PACKAGES_DIR
+  ensure_dir $RELAY_PACKAGES_DIR/$1
+  local excludes=()
+  local npmignore_path=$NPM_PACKAGES_DIR/$1/.npmignore
+
+  # Excludes are defined on .npmignore
+  if [ -f $npmignore_path ]; then
+    for item in $(tr '\n' ' ' <.npmignore); do
+      local item_path=$NPM_PACKAGES_DIR/$1/$item
+      # Only existent folder/files are added to $excludes
+      if [ -d $item_path ] || [ -f $item_path ]; then
+        excludes+=($item)
+      fi
+    done
+  fi
+
+  rsync -ra $NPM_PACKAGES_DIR/$1 $RELAY_PACKAGES_DIR $(printf '--exclude=%s ' "${excludes[@]}")
+  # TODO: document
+  # --exclude node_modules --exclude yarn.lock --exclude .git
+
+  cd $NPM_PACKAGES_DIR/$1 && yarn unlink
+  cd $RELAY_PACKAGES_DIR/$1 && yarn link
+  cd $CURRENT_DIR
+}
+
+if [ "$#" -lt 1 ]; then
+  local PACKAGE_NAME=$(basename "$PWD")
+  if [ ! -d node_modules ]; then yarn install --force; fi
+  yarn build
+  initiate_relay $PACKAGE_NAME
+else
+
+  local RELAY_PACKAGE_DIR=$RELAY_PACKAGES_DIR/$1
+  local TARGET_PACKAGE_DIR=$NPM_PACKAGES_DIR/$1
+
+  if [ -d $TARGET_PACKAGE_DIR ]; then
+
+    if [ ! -d $RELAY_PACKAGE_DIR ]; then
+      initiate_relay $1
+    fi
+
+    cd $CURRENT_DIR
+    # rm -rf node_modules/$1
+    yarn link $1
+    yarn install --force
+
+    # yarn add $(get_relative_path $TARGET_PACKAGE_DIR)
+
+  else
+    echo "Couldn't find the local npm package or its relay. \"$1\"."
+  fi
+
+# Verify if folder contains package.json/ is an npm subdir ??
+# Could use yarn link instead ??
+# - Simulate same installation process as in yarn add.
+# - Install package on an occult directory and refere that installation path on yarn link.
+# - - Ensure that no devdependencies are installed ??
+
+fi

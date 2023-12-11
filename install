@@ -3,7 +3,7 @@
 
 source lib/util
 
-ensure_dependency grep
-ensure_dependency wc
+ensure_dependency node
+ensure_dependency rsync
 
 install_bin_on_cli
